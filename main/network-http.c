@@ -12,6 +12,7 @@
 #include "helpers.h"
 #include "esp_chip_info.h"
 #include "esp_mac.h"
+#include "cli/cli.h"
 
 #define TAG "network-http"
 #define JSON_ERROR(error_text) "{\"error\": \"" error_text "\"}"
@@ -179,11 +180,12 @@ static esp_err_t system_tasks_handler(httpd_req_t* req) {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     httpd_resp_set_type(req, "application/json");
 
+    cJSON* root = cJSON_CreateObject();
+#if (configUSE_TRACE_FACILITY == 1)
     uint32_t task_count = uxTaskGetNumberOfTasks();
     TaskStatus_t* tasks = malloc(task_count * sizeof(TaskStatus_t));
     task_count = uxTaskGetSystemState(tasks, task_count, NULL);
 
-    cJSON* root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "count", task_count);
     cJSON* array = cJSON_AddArrayToObject(root, "list");
 
@@ -221,12 +223,16 @@ static esp_err_t system_tasks_handler(httpd_req_t* req) {
 
         cJSON_AddItemToArray(array, object);
     }
+    free((void*)tasks);
+#else
+    cJSON_AddNumberToObject(root, "count", 0);
+    cJSON_AddArrayToObject(root, "list");
+#endif
 
     const char* json_text = cJSON_Print(root);
     httpd_resp_sendstr(req, json_text);
     free((void*)json_text);
     cJSON_Delete(root);
-    free((void*)tasks);
 
     return ESP_OK;
 }
@@ -260,6 +266,9 @@ static esp_err_t system_info_get_handler(httpd_req_t* req) {
         break;
     case CHIP_ESP32C3:
         cJSON_AddStringToObject(root, "model", "ESP32-C3");
+        break;
+    case CHIP_ESP32C6:
+        cJSON_AddStringToObject(root, "model", "ESP32-C6");
         break;
     default:
         cJSON_AddStringToObject(root, "model", "UNKNOWN");
@@ -605,7 +614,108 @@ err_fail:
     return ESP_FAIL;
 }
 
+typedef struct {
+    char* buf;
+    size_t len;
+    size_t cap;
+} WebCliOutput;
+
+static void web_cli_write_cb(const uint8_t* data, size_t data_size, void* context) {
+    WebCliOutput* out = (WebCliOutput*)context;
+    if(out->len + data_size + 1 >= out->cap) {
+        size_t new_cap = (out->cap + data_size + 512) * 2;
+        char* new_buf = realloc(out->buf, new_cap);
+        if(!new_buf) return;
+        out->buf = new_buf;
+        out->cap = new_cap;
+    }
+    memcpy(out->buf + out->len, data, data_size);
+    out->len += data_size;
+    out->buf[out->len] = '\0';
+}
+
+static esp_err_t terminal_run_handler(httpd_req_t* req) {
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
+    httpd_resp_set_type(req, "application/json");
+
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_sendstr(req, "OK");
+        return ESP_OK;
+    }
+
+    int total_length = req->content_len;
+    char* req_buffer = malloc(total_length + 1);
+    if (!req_buffer) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, JSON_ERROR("out of memory"));
+        return ESP_FAIL;
+    }
+
+    int current_length = 0;
+    while(current_length < total_length) {
+        int received = httpd_req_recv(req, req_buffer + current_length, total_length - current_length);
+        if(received <= 0) {
+            free(req_buffer);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, JSON_ERROR("cannot receive request data"));
+            return ESP_FAIL;
+        }
+        current_length += received;
+    }
+    req_buffer[total_length] = '\0';
+
+    cJSON* root = cJSON_Parse(req_buffer);
+    free(req_buffer);
+
+    char cmd[128] = {0};
+    if (root) {
+        cJSON* cmd_item = cJSON_GetObjectItem(root, "cmd");
+        if (cmd_item && cmd_item->type == cJSON_String && cmd_item->valuestring) {
+            strncpy(cmd, cmd_item->valuestring, sizeof(cmd) - 1);
+        }
+        cJSON_Delete(root);
+    }
+
+    WebCliOutput out = {
+        .buf = malloc(1024),
+        .len = 0,
+        .cap = 1024,
+    };
+    if (out.buf) {
+        out.buf[0] = '\0';
+    }
+
+    Cli* web_cli = cli_init();
+    cli_set_context(web_cli, &out);
+    cli_set_write_cb(web_cli, web_cli_write_cb);
+
+    cli_execute_line(web_cli, cmd);
+
+    cli_free(web_cli);
+
+    cJSON* resp = cJSON_CreateObject();
+    cJSON_AddStringToObject(resp, "cmd", cmd);
+    cJSON_AddStringToObject(resp, "output", out.buf ? out.buf : "");
+    cJSON_AddStringToObject(resp, "status", "ok");
+
+    const char* resp_json = cJSON_Print(resp);
+    httpd_resp_sendstr(req, resp_json);
+
+    free((void*)resp_json);
+    cJSON_Delete(resp);
+    if (out.buf) free(out.buf);
+
+    return ESP_OK;
+}
+
 const httpd_uri_t uri_handlers[] = {
+
+    /*************** TERMINAL ***************/
+
+    {.uri = "/api/v1/terminal/run",
+     .method = HTTP_POST,
+     .handler = terminal_run_handler,
+     .user_ctx = NULL},
 
     /*************** SYSTEM ***************/
 

@@ -80,10 +80,13 @@ void cli_wifi_scan(Cli* cli, mstring_t* args) {
     memset(ap_info, 0, sizeof(wifi_ap_record_t));
 
     esp_wifi_scan_start(NULL, true);
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    if(number > ap_count) number = ap_count;
+    if(number > 0) {
+        ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    }
 
-    for(int i = 0; (i < WIFI_SCAN_SIZE) && (i < ap_count); i++) {
+    for(int i = 0; i < number; i++) {
         cli_printf(cli, "\"%s\" ", ap_info[i].ssid);
         cli_printf(cli, "%dch ", ap_info[i].primary);
         cli_printf(cli, "%idBm ", ap_info[i].rssi);

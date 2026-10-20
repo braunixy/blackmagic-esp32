@@ -18,6 +18,7 @@ typedef void (*CliWrite)(const uint8_t* data, size_t data_size, void* context);
 typedef void (*CliFlush)(void* context);
 
 Cli* cli_init(void);
+void cli_free(Cli* cli);
 
 void cli_set_context(Cli* cli, void* context);
 
@@ -34,6 +35,8 @@ void cli_write_str(Cli* cli, const char* str);
 void cli_write_char(Cli* cli, uint8_t c);
 
 void cli_handle_char(Cli* cli, uint8_t c);
+
+void cli_execute_line(Cli* cli, const char* line_str);
 
 void cli_write_eol(Cli* cli);
 

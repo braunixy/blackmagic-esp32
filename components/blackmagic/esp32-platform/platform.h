@@ -16,7 +16,7 @@ void led_set_red(uint8_t value);
 void led_set_green(uint8_t value);
 void led_set_blue(uint8_t value);
 
-#define PLATFORM_IDENT "ESP32"
+#define PLATFORM_IDENT "ESP32-C6 (XIAO)"
 
 #define NO_USB_PLEASE
 
@@ -37,12 +37,16 @@ void led_set_blue(uint8_t value);
 #define TCK_PIN (-1)
 
 #undef PLATFORM_HAS_TRACESWO
-#define TRACESWO_PIN 18
+#define TRACESWO_PIN 21
 
-// ON ESP32 we dont have the PORTS, this is dummy value until code is corrected
+// XIAO ESP32C6 Pin Mapping:
+// D0: GPIO 0 -> SWCLK
+// D1: GPIO 1 -> SWDIO
+// D2: GPIO 2 -> NRST (Target Reset)
 #define SWCLK_PORT (0)
-#define SWCLK_PIN (25)
-#define SWDIO_PIN (26)
+#define SWCLK_PIN (0)
+#define SWDIO_PIN (1)
+#define NRST_PIN (2)
 
 #if SWDIO_PIN >= 32 || SWCLK_PIN >= 32
 #error To support pins greater than 31, change the platform_gpio functions

@@ -9,8 +9,26 @@
 #include <mdns.h>
 #include <lwip/apps/netbiosns.h>
 #include "esp_mac.h"
+#include <driver/gpio.h>
 
 #define TAG "network"
+
+// Seeed Studio XIAO ESP32C6 onboard RF switch configuration:
+// GPIO 3: RF switch enable (Active LOW: LOW enables the switch)
+// GPIO 14: Antenna select (LOW = built-in ceramic antenna, HIGH = external U.FL)
+static void xiao_rf_switch_init(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << 3) | (1ULL << 14),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+    gpio_set_level(GPIO_NUM_3, 0);  // Power/enable RF switch
+    gpio_set_level(GPIO_NUM_14, 0); // Onboard ceramic antenna
+    ESP_LOGI(TAG, "XIAO ESP32C6 RF switch initialized (onboard ceramic antenna)");
+}
 
 #define ESP_WIFI_SSID "blackmagic"
 #define ESP_WIFI_PASS "iamwitcher"
@@ -190,6 +208,8 @@ void network_post_init(void) {
 }
 
 WiFiMode network_init(void) {
+    xiao_rf_switch_init();
+
     mstring_t* ssid = mstring_alloc();
     mstring_t* pass = mstring_alloc();
 

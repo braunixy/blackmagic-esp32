@@ -33,15 +33,14 @@ set(PRIV_REQUIRES
     esp_http_server
     json
     blackmagic                      
-    dap-link
     mlib
-    soft-uart
     svelte-portal
-    tinyusb
+    esp_driver_usb_serial_jtag
 )
 
 idf_component_register(SRCS ${SOURCES}
-                    INCLUDE_DIRS ${INCLUDES})
+                    INCLUDE_DIRS ${INCLUDES}
+                    REQUIRES ${PRIV_REQUIRES})
 
 # Commit
 execute_process(

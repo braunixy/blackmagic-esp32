@@ -117,6 +117,9 @@ void cli_device_info(Cli* cli, mstring_t* args) {
     case CHIP_ESP32C3:
         cli_write_str(cli, "ESP32-C3");
         break;
+    case CHIP_ESP32C6:
+        cli_write_str(cli, "ESP32-C6");
+        break;
     default:
         cli_write_str(cli, "UNKNOWN");
         break;

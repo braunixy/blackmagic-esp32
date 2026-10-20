@@ -167,5 +167,5 @@ void network_gdb_server_init(void) {
 
     esp_wifi_set_ps(WIFI_PS_NONE);
     xTaskCreatePinnedToCore(
-        network_gdb_server_task, "network_gdb_server", 4096, (void*)AF_INET, 5, NULL, 0);
+        network_gdb_server_task, "network_gdb_server", 4096, (void*)AF_INET, 5, NULL, tskNO_AFFINITY);
 }

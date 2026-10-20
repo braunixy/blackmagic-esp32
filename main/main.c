@@ -45,6 +45,6 @@ void app_main(void) {
 
     cli_uart_init();
 
-    xTaskCreatePinnedToCore(&gdb_application_thread, "gdb_thread", 4096, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(&gdb_application_thread, "gdb_thread", 4096, NULL, 5, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "end");
 }

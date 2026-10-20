@@ -6,6 +6,7 @@
   import SpinnerBig from "./SpinnerBig.svelte";
   import Select from "./Select.svelte";
   import ButtonInline from "./ButtonInline.svelte";
+  import Terminal from "./Terminal.svelte";
 
   let server = "";
   if (development_mode) {
@@ -43,7 +44,7 @@
   let sta_pass_input;
   let hostname_input;
 
-  let current_tab = "WiFi";
+  let current_tab = "TERM";
   if (localStorage.getItem("current_tab") != null) {
     current_tab = localStorage.getItem("current_tab");
   }
@@ -107,6 +108,15 @@
 <main>
   <tabs>
     <tab
+      class:selected={current_tab == "TERM"}
+      on:click={() => {
+        change_tab("TERM");
+      }}
+    >
+      TERM
+    </tab>
+
+    <tab
       class:selected={current_tab == "WiFi"}
       on:click={() => {
         change_tab("WiFi");
@@ -135,6 +145,12 @@
   </tabs>
 
   <tabs-content>
+    {#if current_tab == "TERM"}
+      <tab-content>
+        <Terminal {server} {api_post} />
+      </tab-content>
+    {/if}
+
     {#if current_tab == "WiFi"}
       <tab-content>
         <div class="grid">

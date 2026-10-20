@@ -24,53 +24,63 @@ typedef struct {
     { .name = pin_name, .gpio_num = GPIO_NUM_##pin_index, .get = true, .set = false }
 
 static const GPIOItem gpio_items[] = {
-    //BOOT
-    MAKE_IO_READONLY(0),
-    MAKE_IO_NAMED_READONLY("BOOT", 0),
-    // SWD
+    // BOOT button
+    MAKE_IO_READONLY(9),
+    MAKE_IO_NAMED_READONLY("BOOT", 9),
+
+    // XIAO Pin Aliases & Native ESP32-C6 GPIOs
+    // D0 / SWCLK (GPIO 0)
+    MAKE_IO(0),
+    MAKE_IO_NAMED("D0", 0),
+    MAKE_IO_NAMED("SWCLK", 0),
+
+    // D1 / SWDIO (GPIO 1)
     MAKE_IO(1),
-    MAKE_IO_NAMED("SWCLK", 1),
+    MAKE_IO_NAMED("D1", 1),
+    MAKE_IO_NAMED("SWDIO", 1),
+
+    // D2 / NRST (GPIO 2)
     MAKE_IO(2),
-    MAKE_IO_NAMED("SWDIO", 2),
-    // I2C_PULL_UP
-    MAKE_IO(3),
-    MAKE_IO_NAMED("I2C_PULL_UP", 3),
-    // I2C_PULL_UP
-    MAKE_IO(4),
-    MAKE_IO_NAMED("LED_BLUE", 4),
-    MAKE_IO(5),
-    MAKE_IO_NAMED("LED_GREEN", 5),
-    MAKE_IO(6),
-    MAKE_IO_NAMED("LED_RED", 6),
-    // GPIO
-    MAKE_IO(7),
-    MAKE_IO(8),
-    MAKE_IO(9),
-    // SPI
-    MAKE_IO(10),
-    MAKE_IO_NAMED("SWO", 10),
-    MAKE_IO_NAMED("SPI_CS", 10),
-    MAKE_IO(11),
-    MAKE_IO_NAMED("SPI_MOSI", 11),
-    MAKE_IO(12),
-    MAKE_IO_NAMED("SPI_CLK", 12),
-    MAKE_IO(13),
-    MAKE_IO_NAMED("SPI_MISO", 13),
-    // GPIO
-    MAKE_IO(14),
-    MAKE_IO(15),
-    MAKE_IO(16),
-    // GPIO
-    MAKE_IO(17),
-    MAKE_IO(18),
+    MAKE_IO_NAMED("D2", 2),
+    MAKE_IO_NAMED("NRST", 2),
+
+    // D3 (GPIO 21)
     MAKE_IO(21),
-    MAKE_IO(33),
-    MAKE_IO(34),
-    MAKE_IO(35),
-    MAKE_IO(36),
-    MAKE_IO(37),
-    MAKE_IO(38),
-    MAKE_IO(39),
+    MAKE_IO_NAMED("D3", 21),
+
+    // D4 (GPIO 22)
+    MAKE_IO(22),
+    MAKE_IO_NAMED("D4", 22),
+
+    // D5 (GPIO 23)
+    MAKE_IO(23),
+    MAKE_IO_NAMED("D5", 23),
+
+    // D6 / TX (GPIO 16)
+    MAKE_IO(16),
+    MAKE_IO_NAMED("D6", 16),
+    MAKE_IO_NAMED("TX", 16),
+
+    // D7 / RX (GPIO 17)
+    MAKE_IO(17),
+    MAKE_IO_NAMED("D7", 17),
+    MAKE_IO_NAMED("RX", 17),
+
+    // D8 (GPIO 19)
+    MAKE_IO(19),
+    MAKE_IO_NAMED("D8", 19),
+
+    // D9 (GPIO 20)
+    MAKE_IO(20),
+    MAKE_IO_NAMED("D9", 20),
+
+    // D10 (GPIO 18)
+    MAKE_IO(18),
+    MAKE_IO_NAMED("D10", 18),
+
+    // Onboard user LED (GPIO 15)
+    MAKE_IO(15),
+    MAKE_IO_NAMED("LED", 15),
 };
 
 static void cli_gpio_print_list_set(Cli* cli) {

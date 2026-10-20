@@ -16,85 +16,79 @@ uint32_t swd_delay_cnt = 0;
 // static const char* TAG = "gdb-platform";
 
 void __attribute__((always_inline)) platform_swdio_mode_float(void) {
-    // gpio_set_direction(SWDIO_PIN, GPIO_MODE_INPUT);
-    // gpio_set_pull_mode(SWDIO_PIN, GPIO_FLOATING);
-
-    // Faster variant
     gpio_ll_output_disable(&GPIO, SWDIO_PIN);
     gpio_ll_input_enable(&GPIO, SWDIO_PIN);
 }
 
 void __attribute__((always_inline)) platform_swdio_mode_drive(void) {
-    // gpio_set_direction(SWDIO_PIN, GPIO_MODE_OUTPUT);
-    // gpio_set_pull_mode(SWDIO_PIN, GPIO_FLOATING);
-
-    // Faster variant
-    // Supports only gpio less than 32
-    GPIO.enable_w1ts = (0x1 << SWDIO_PIN);
+    gpio_ll_output_enable(&GPIO, SWDIO_PIN);
     esp_rom_gpio_connect_out_signal(SWDIO_PIN, SIG_GPIO_OUT_IDX, false, false);
 }
 
 void __attribute__((always_inline)) platform_gpio_set_level(int32_t gpio_num, uint32_t value) {
-    // gpio_set_level(gpio_num, value);
-
-    // Faster variant
-    // Supports only gpio less than 32
-    if(value) {
-        GPIO.out_w1ts = (1 << gpio_num);
-    } else {
-        GPIO.out_w1tc = (1 << gpio_num);
-    }
+    gpio_ll_set_level(&GPIO, gpio_num, value);
 }
 
 void __attribute__((always_inline)) platform_gpio_set(int32_t gpio_num) {
-    // platform_gpio_set_level(gpio_num, 1);
-
-    // Faster variant
-    // Supports only gpio less than 32
-    GPIO.out_w1ts = (1 << gpio_num);
+    gpio_ll_set_level(&GPIO, gpio_num, 1);
 }
 
 void __attribute__((always_inline)) platform_gpio_clear(int32_t gpio_num) {
-    // platform_gpio_set_level(gpio_num, 0);
-
-    // faster variant
-    // supports only gpio less than 32
-    GPIO.out_w1tc = (1 << gpio_num);
+    gpio_ll_set_level(&GPIO, gpio_num, 0);
 }
 
 int __attribute__((always_inline)) platform_gpio_get_level(int32_t gpio_num) {
-    // int level = gpio_get_level(gpio_num);
-
-    // Faster variant
-    // Supports only gpio less than 32
-    int level = (GPIO.in >> gpio_num) & 0x1;
-    return level;
+    return gpio_ll_get_level(&GPIO, gpio_num);
 }
 
 // init platform
 void platform_init() {
-    gpio_config_t io_conf;
+    gpio_config_t io_conf = {0};
 
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
 
-    io_conf.pin_bit_mask = ((1 << SWCLK_PIN) | (1 << SWDIO_PIN));
+    io_conf.pin_bit_mask = ((1ULL << SWCLK_PIN) | (1ULL << SWDIO_PIN));
     io_conf.pull_down_en = 0;
     io_conf.pull_up_en = 0;
 
     gpio_config(&io_conf);
+
+#if defined(NRST_PIN) && (NRST_PIN >= 0)
+    gpio_config_t rst_conf = {0};
+    rst_conf.intr_type = GPIO_INTR_DISABLE;
+    rst_conf.mode = GPIO_MODE_INPUT;
+    rst_conf.pin_bit_mask = (1ULL << NRST_PIN);
+    rst_conf.pull_up_en = 1;
+    rst_conf.pull_down_en = 0;
+    gpio_config(&rst_conf);
+#endif
 
     platform_max_frequency_set(SWD_DEFAULT_FREQUENCY);
 }
 
 // set reset target pin level
 void platform_srst_set_val(bool assert) {
+#if defined(NRST_PIN) && (NRST_PIN >= 0)
+    if(assert) {
+        gpio_ll_set_level(&GPIO, NRST_PIN, 0);
+        gpio_ll_output_enable(&GPIO, NRST_PIN);
+    } else {
+        gpio_ll_output_disable(&GPIO, NRST_PIN);
+        gpio_ll_input_enable(&GPIO, NRST_PIN);
+    }
+#else
     (void)assert;
+#endif
 }
 
 // get reset target pin level
 bool platform_srst_get_val(void) {
+#if defined(NRST_PIN) && (NRST_PIN >= 0)
+    return (gpio_ll_get_level(&GPIO, NRST_PIN) == 0);
+#else
     return false;
+#endif
 }
 
 // target voltage
@@ -148,11 +142,11 @@ uint32_t platform_max_frequency_get(void) {
 }
 
 void platform_nrst_set_val(bool assert) {
-    (void)assert;
+    platform_srst_set_val(assert);
 }
 
 bool platform_nrst_get_val() {
-    return false;
+    return platform_srst_get_val();
 }
 
 void platform_target_clk_output_enable(bool enable) {

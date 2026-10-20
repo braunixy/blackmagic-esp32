@@ -44,6 +44,13 @@ Cli* cli_init(void) {
     return cli;
 }
 
+void cli_free(Cli* cli) {
+    if(!cli) return;
+    if(cli->line) mstring_free(cli->line);
+    if(cli->prev_line) mstring_free(cli->prev_line);
+    free(cli);
+}
+
 void cli_reset(Cli* cli) {
     mstring_reset(cli->line);
     cli->cursor_position = 0;
@@ -164,6 +171,18 @@ static bool cli_handle_enter(Cli* cli) {
         mstring_strim(args, "  \n\r\t");
     }
 
+    if(mstring_size(command) >= 2 && mstring_get_cstr(command)[0] == 'x' && mstring_get_cstr(command)[1] == '/') {
+        mstring_t* new_args = mstring_alloc();
+        mstring_set_strn(new_args, mstring_get_cstr(command) + 1, mstring_size(command) - 1);
+        if(mstring_size(args) > 0) {
+            mstring_push_back(new_args, ' ');
+            mstring_cat(new_args, mstring_get_cstr(args));
+        }
+        mstring_set(args, mstring_get_cstr(new_args));
+        mstring_free(new_args);
+        mstring_set(command, "x");
+    }
+
     item = cli_search_item(cli, command);
     if(item != NULL) {
         item->callback(cli, args);
@@ -174,6 +193,16 @@ static bool cli_handle_enter(Cli* cli) {
     mstring_free(command);
     mstring_free(args);
     return result;
+}
+
+void cli_execute_line(Cli* cli, const char* line_str) {
+    if(!cli || !line_str) return;
+    mstring_set(cli->line, line_str);
+    mstring_strim(cli->line, " \t\r\n");
+    if(mstring_size(cli->line) > 0) {
+        cli_handle_enter(cli);
+        cli_reset(cli);
+    }
 }
 
 static void cli_handle_backspace(Cli* cli) {
